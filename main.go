@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,7 +18,7 @@ type GetStockfishParams struct {
 type FullStockfishResponse struct {
 	Success      bool    `json:"success"`
 	Evaluation   float64 `json:"evaluation"`
-	Mate         *bool   `json:"mate"`
+	Mate         *int    `json:"mate"`
 	BestMove     string  `json:"bestmove"`
 	Continuation string  `json:"continuation"`
 }
@@ -82,7 +83,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	// Unmarshal the response into FullStockfishResponse struct
 	var fullResponse FullStockfishResponse
 	err = json.Unmarshal(respBody, &fullResponse)
@@ -90,7 +90,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to parse Stockfish API response", http.StatusInternalServerError)
 		return
 	}
-
+	log.Print(fullResponse)
 	// Extract the necessary data
 	parsedResponse := ParsedResponse{
 		Success:  fullResponse.Success,
