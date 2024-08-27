@@ -1,6 +1,6 @@
 # AI Chess
-## Project Picture
-
+## Demo
+![Project Demo](./Gif/AIChessExample.gif)
 ## Guide To Running Project
 - Git clone the project
 - Run the follow commands:
