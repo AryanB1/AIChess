@@ -1,10 +1,10 @@
 import React from 'react';
 import './App.css';
-import PlayRandomMoveEngine from "./Board";
+import ChessBoard from "./ChessBoard";
 
 function App() {
   return (
-    <PlayRandomMoveEngine />
+    <ChessBoard />
 );
 }
 

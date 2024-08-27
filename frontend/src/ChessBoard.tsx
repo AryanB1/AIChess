@@ -2,10 +2,17 @@ import React, { useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 
-function PlayRandomMoveEngine() {
+function ChessBoard() {
     const engine = new Chess();
+    type BoardOrientation = 'white' | 'black';
     const [boardState, setBoardState] = useState(engine.fen());
+    const [boardOrientationState, setBoardOrientationState] = useState<BoardOrientation>('white');
+    const [isLocked, setIsLocked] = useState(false);
+    const flipBoard = () => {
+        setBoardOrientationState((prev) => (prev === 'white' ? 'black' : 'white'));
+    };
     const playRandomMove = () => {
+        if (isLocked) return;
         engine.load(boardState)
         const legalMoves = engine.moves({verbose:true});
         let randomIndex = Math.floor(Math.random() * legalMoves.length);
@@ -16,9 +23,9 @@ function PlayRandomMoveEngine() {
         }
         console.log(legalMoves);
         console.log(engine.fen())
-        setBoardState(engine.fen());
     };
     const onDrop = (sourceSquare: string, targetSquare: string): boolean => {
+        if (isLocked) return false;
         engine.load(boardState)
         try {
             const move = engine.move({
@@ -27,6 +34,8 @@ function PlayRandomMoveEngine() {
             });
             if (move) {
                 setBoardState(engine.fen());
+                setIsLocked(true)
+                stockFishMove()
                 return true;
             }
         } catch (error) {
@@ -34,19 +43,23 @@ function PlayRandomMoveEngine() {
         }
         return false;
     };
+    const stockFishMove = (): string => {
 
+        return ""
+    }
     return (
-        <div style={{ width: '500px' }}>
+        <div style={{ width: '500px', paddingLeft: '300px', paddingTop: '100px'}}>
             <Chessboard
                 id="BasicBoard"
-                boardOrientation="black"
+                boardOrientation={boardOrientationState}
                 showBoardNotation={true}
                 position={boardState}
                 onPieceDrop={onDrop}
             />
             <button onClick={playRandomMove}>Play Random Move</button>
+            <button onClick={flipBoard}>Flip Board</button>
         </div>
     );
 }
 
-export default PlayRandomMoveEngine;
+export default ChessBoard;
