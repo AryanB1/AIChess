@@ -34,8 +34,13 @@ function ChessBoard() {
             });
             if (move) {
                 setBoardState(engine.fen());
-                setIsLocked(true)
-                stockFishMove()
+                setIsLocked(true);
+                stockFishMove(engine.fen()).then(() => {
+                    setIsLocked(false); // Unlock the board after handling the API response
+                }).catch(error => {
+                    console.error('Error in API:', error);
+                    setIsLocked(false); // Unlock the board in case of error
+                });
                 return true;
             }
         } catch (error) {
@@ -43,10 +48,43 @@ function ChessBoard() {
         }
         return false;
     };
-    const stockFishMove = (): string => {
+    const stockFishMove = async (board: string): Promise<void> => {
+        try {
+            const response = await fetch("http://localhost:8081/engine-move", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    depth: 12,
+                    fen: board,
+                }),
+            });
 
-        return ""
-    }
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            console.log('API response:', data);
+
+            // Extract the 'bestmove' field
+            const bestMove = data.bestmove;
+            const success = data.success;
+
+            if (bestMove && success) {
+                engine.load(board)
+                engine.move(bestMove)
+                setBoardState(engine.fen())
+            }
+            else {
+                throw new Error('API response was not ok');
+            }
+
+        } catch (error) {
+            console.error('Error calling the API:', error);
+        }
+    };
     return (
         <div style={{ width: '500px', paddingLeft: '300px', paddingTop: '100px'}}>
             <Chessboard
