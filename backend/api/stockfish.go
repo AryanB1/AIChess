@@ -32,13 +32,13 @@ type ParsedResponse struct {
 // Endpoint that frontend calls to get stockfish moves
 func StockFishEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
-	// if r.Method == http.MethodOptions {
-	// 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-	// 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	// 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	// 	w.WriteHeader(http.StatusOK)
-	// 	return
-	// }
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
 	w.Header().Set("Content-Type", "application/json")
 	// Validates that the method is POST
