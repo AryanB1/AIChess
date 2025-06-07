@@ -214,7 +214,6 @@ function ChessBoard() {
             {/* Header */}
             <div className={styles.header}>
                 <h1 className={styles.title}>AI Chess</h1>
-                <p className={styles.subtitle}>Challenge the AI in this beautiful chess experience</p>
             </div>
 
             {/* Game Info Cards */}

@@ -29,8 +29,8 @@
 
 /* Light Theme */
 .light {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #2d3748;
+  background: #f0f2f5; /* A light grey background */
+  color: #333; /* Darker text for better contrast */
 }
 
 /* Dark Theme */
@@ -182,11 +182,10 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
   min-width: 140px;
   position: relative;
   overflow: hidden;
+  color: #ffffff; /* White text for all buttons */
 }
 
 .button:before {
@@ -205,13 +204,14 @@
 }
 
 .button:disabled {
-  opacity: 0.6;
+  background-color: #cccccc;
+  color: #666666;
   cursor: not-allowed;
-  transform: none !important;
 }
 
-.button:disabled:hover:before {
-  left: -100%;
+.dark .button:disabled {
+  background-color: #555555;
+  color: #aaaaaa;
 }
 
 .button:not(:disabled):hover {
@@ -222,49 +222,55 @@
   transform: translateY(0);
 }
 
+/* Primary Button (e.g., Random Move) */
 .primaryButton {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+  background-color: #007bff; /* Blue */
 }
 
-.primaryButton:hover:not(:disabled) {
-  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+.primaryButton:hover {
+  background-color: #0056b3; /* Darker Blue */
 }
 
+/* Secondary Button (e.g., Flip Board) */
 .secondaryButton {
-  background: linear-gradient(135deg, #48bb78, #38a169);
-  color: white;
-  box-shadow: 0 8px 32px rgba(72, 187, 120, 0.3);
+  background-color: #6c757d; /* Grey */
 }
 
-.secondaryButton:hover:not(:disabled) {
-  box-shadow: 0 12px 40px rgba(72, 187, 120, 0.4);
+.secondaryButton:hover {
+  background-color: #545b62; /* Darker Grey */
 }
 
+/* Danger Button (e.g., New Game) */
 .dangerButton {
-  background: linear-gradient(135deg, #f56565, #e53e3e);
-  color: white;
-  box-shadow: 0 8px 32px rgba(245, 101, 101, 0.3);
+  background-color: #dc3545; /* Red */
 }
 
-.dangerButton:hover:not(:disabled) {
-  box-shadow: 0 12px 40px rgba(245, 101, 101, 0.4);
+.dangerButton:hover {
+  background-color: #b02a37; /* Darker Red */
 }
 
-.infoButton {
-  background: linear-gradient(135deg, #4299e1, #3182ce);
-  color: white;
-  box-shadow: 0 8px 32px rgba(66, 153, 225, 0.3);
+.dark .primaryButton {
+  background-color: #007bff; /* Blue - can be same or different for dark mode */
 }
 
-.infoButton:hover:not(:disabled) {
-  box-shadow: 0 12px 40px rgba(66, 153, 225, 0.4);
+.dark .primaryButton:hover {
+  background-color: #0056b3; /* Darker Blue */
 }
 
-/* Dark theme button adjustments */
-.dark .button {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.dark .secondaryButton {
+  background-color: #6c757d; /* Grey */
+}
+
+.dark .secondaryButton:hover {
+  background-color: #545b62; /* Darker Grey */
+}
+
+.dark .dangerButton {
+  background-color: #dc3545; /* Red */
+}
+
+.dark .dangerButton:hover {
+  background-color: #b02a37; /* Darker Red */
 }
 
 /* Animations */
@@ -378,14 +384,18 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Existing border */
   text-align: center;
   min-width: 120px;
+  /* Add a more prominent border */
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1); /* Example: Black border with 0.1 opacity */
 }
 
 .dark .infoCard {
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Existing border for dark mode */
+  /* Add a more prominent border for dark mode */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1); /* Example: White border with 0.1 opacity */
 }
 
 .infoCard h4 {
