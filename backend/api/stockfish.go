@@ -29,6 +29,8 @@ type ParsedResponse struct {
 	BestMove string `json:"bestmove"`
 }
 
+var StockfishAPIURL = "https://stockfish.online/api/s/v2.php?"
+
 // Endpoint that frontend calls to get stockfish moves
 func StockFishEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
@@ -80,8 +82,12 @@ func StockFishEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Unmarshals the response into FullStockfishResponse struct
 	var fullResponse FullStockfishResponse
 	err = json.Unmarshal(respBody, &fullResponse)
-	if err != nil || !fullResponse.Success {
-		http.Error(w, "Failed to parse Stockfish API response", http.StatusInternalServerError)
+	if err != nil { // Simplified error check, was: err != nil || !fullResponse.Success
+		http.Error(w, "Failed to parse Stockfish API response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !fullResponse.Success { // Added separate check for Success field after unmarshalling
+		http.Error(w, "Stockfish API call was not successful based on response data", http.StatusInternalServerError)
 		return
 	}
 	// Extracts necessary data
@@ -171,7 +177,7 @@ func SendRequestToStockFish(body GetStockfishParams) (*http.Response, error) {
 
 	encodedParams := params.Encode()
 
-	req, err := http.NewRequest("GET", "https://stockfish.online/api/s/v2.php?"+encodedParams, nil)
+	req, err := http.NewRequest("GET", StockfishAPIURL+encodedParams, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -185,9 +191,10 @@ func SendRequestToStockFish(body GetStockfishParams) (*http.Response, error) {
 	return resp, nil
 }
 
-func ExtractBestMove(bestMove string) string {
-	parts := strings.Split(bestMove, " ")
-	if len(parts) > 1 {
+func ExtractBestMove(bestMoveInput string) string { // Renamed parameter to avoid conflict
+	parts := strings.Split(bestMoveInput, " ")
+	// Expects format like "bestmove e2e4 continuation ..."
+	if len(parts) >= 2 && parts[0] == "bestmove" {
 		return parts[1]
 	}
 	return ""

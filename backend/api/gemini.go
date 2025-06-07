@@ -7,15 +7,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
+	"os" // Added for robust path construction
 	"strings"
 	"sync"
 )
 
 var loadEnvOnce sync.Once
+var DotEnvPath = ".env" // Exported for testability
+
+// GetGeminiAPIURL is a variable that holds a function to get the Gemini API URL. This allows overriding for testing.
+var GetGeminiAPIURL = func(apiKey string) string {
+	return "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey
+}
+
+// ResetLoadEnvOnce is a helper function for testing to reset the sync.Once for loadEnvFromFile.
+func ResetLoadEnvOnce() {
+	loadEnvOnce = sync.Once{}
+}
 
 func loadEnvFromFile() error {
-	envFilePath := ".env"
+	envFilePath := DotEnvPath // Use the configurable DotEnvPath
 	file, err := os.Open(envFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -40,9 +51,7 @@ func loadEnvFromFile() error {
 			if len(value) > 1 && ((strings.HasPrefix(value, "\\\"") && strings.HasSuffix(value, "\\\"")) || (strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'"))) {
 				value = value[1 : len(value)-1]
 			}
-			if err := os.Setenv(key, value); err != nil {
-				fmt.Printf("Warning: failed to set env var %s: %v\n", key, err)
-			}
+			os.Setenv(key, value)
 		}
 	}
 
@@ -102,7 +111,7 @@ func GetGeminiExplanation(fen string, bestMove string) (string, error) {
 		return "", fmt.Errorf("GEMINI_API_KEY not set. Please ensure it's in .env or your environment")
 	}
 
-	apiURL := "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey
+	apiURL := GetGeminiAPIURL(apiKey) // Use the GetGeminiAPIURL function variable
 
 	prompt := fmt.Sprintf("You are a chess grandmaster. Given the following chess position in FEN notation: %s, Stockfish suggests the best move is %s. Explain why this is a good move, considering tactical advantages, strategic goals, and potential opponent responses. Keep your explanation concise and suitable for a chess enthusiast.", fen, bestMove)
 
@@ -157,5 +166,5 @@ func GetGeminiExplanation(fen string, bestMove string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no explanation found in Gemini API response or content was blocked")
+	return "", fmt.Errorf("no explanation found in Gemini API response or content was blocked (candidates: %d, prompt feedback: %v)", len(geminiResp.Candidates), geminiResp.PromptFeedback)
 }
