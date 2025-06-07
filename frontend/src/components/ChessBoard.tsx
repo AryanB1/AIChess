@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
+import styles from './ChessBoard.module.css';
 
 function ChessBoard() {
     // Initializes the chess engine
@@ -15,66 +16,125 @@ function ChessBoard() {
     const [isLocked, setIsLocked] = useState(false);
     // State to track if the game is over
     const [gameState, setGameState] = useState(false);
+    // State to manage dark mode
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    // State to track move count
+    const [moveCount, setMoveCount] = useState(0);
+    // State to track game status
+    const [gameStatus, setGameStatus] = useState<'playing' | 'waiting' | 'gameOver'>('playing');
+
+    // Load theme preference from localStorage on component mount
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('chessTheme');
+        if (savedTheme === 'dark') {
+            setIsDarkMode(true);
+        }
+    }, []);
+
+    // Save theme preference to localStorage when it changes
+    useEffect(() => {
+        localStorage.setItem('chessTheme', isDarkMode ? 'dark' : 'light');
+    }, [isDarkMode]);
+
+    // Toggle dark mode
+    const toggleDarkMode = () => {
+        setIsDarkMode(!isDarkMode);
+    };
+
+    // Get current player turn
+    const getCurrentPlayer = () => {
+        const currentEngine = new Chess();
+        currentEngine.load(boardState);
+        return currentEngine.turn() === 'w' ? 'White' : 'Black';
+    };
+
+    // Get game result message
+    const getGameResult = () => {
+        const currentEngine = new Chess();
+        currentEngine.load(boardState);
+        if (currentEngine.isCheckmate()) {
+            return `Checkmate! ${currentEngine.turn() === 'w' ? 'Black' : 'White'} wins!`;
+        } else if (currentEngine.isDraw()) {
+            return 'Game ended in a draw!';
+        } else if (currentEngine.isStalemate()) {
+            return 'Stalemate! Game is a draw!';
+        }
+        return 'Game Over!';
+    };
+    
     // Function to flip the board orientation
     const flipBoard = () => {
         setBoardOrientationState((prev) => (prev === 'white' ? 'black' : 'white'));
     };
+
     // Function to play a random move on the board
     const playRandomMove = () => {
         // If the board is locked, don't allow a move
         if (isLocked) return;
+        
         // Loads the current board state into the chess engine
-        engine.load(boardState)
+        const currentEngine = new Chess();
+        currentEngine.load(boardState);
         // Gets all legal moves
-        const legalMoves = engine.moves({verbose:true});
+        const legalMoves = currentEngine.moves({verbose:true});
         // Chooses a random move and keep retrying until we have a valid move
         let randomIndex = Math.floor(Math.random() * legalMoves.length);
         while (true) {
-            let validator = onDrop(legalMoves[randomIndex].from, legalMoves[randomIndex].to);
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            const validator = onDrop(legalMoves[randomIndex].from, legalMoves[randomIndex].to);
             if (validator) break;
             randomIndex = Math.floor(Math.random() * legalMoves.length);
-        }
-        // Checks if game is over
-        if(engine.isGameOver()) {
-            setIsLocked(true)
-            setGameState(true)
-            return true;
+        }        // Checks if game is over
+        if(currentEngine.isGameOver()) {
+            setIsLocked(true);
+            setGameState(true);
+            setGameStatus('gameOver');
+            // return true; // This return was causing an issue as playRandomMove doesn't return a boolean
         }
     };
+
     const onDrop = (sourceSquare: string, targetSquare: string): boolean => {
         // If the board is locked, don't allow a move
         if (isLocked) return false;
+        
         // Loads the current board state into the chess engine
-        engine.load(boardState)
+        const currentEngine = new Chess();
+        currentEngine.load(boardState);
         try {
             // Checks if move is valid
-            const move = engine.move({
+            const move = currentEngine.move({
                 from: sourceSquare,
                 to: targetSquare,
             });
             // If it is valid, update board state, otherwise throw error
             if (move) {
-                setBoardState(engine.fen());
+                setBoardState(currentEngine.fen());
+                setMoveCount((prev: number) => prev + 1);
                 setIsLocked(true);
+                setGameStatus('waiting');
                 // checks if game is finished
-                if(engine.isGameOver()) {
-                    setIsLocked(true)
-                    setGameState(true)
+                if(currentEngine.isGameOver()) {
+                    setIsLocked(true);
+                    setGameState(true);
+                    setGameStatus('gameOver');
                     return true;
                 }
-                stockFishMove(engine.fen()).then(() => {
+                // eslint-disable-next-line @typescript-eslint/no-use-before-define
+                stockFishMove(currentEngine.fen()).then(() => {
                     // Unlock the board after handling the API response
                     setIsLocked(false);
+                    setGameStatus('playing');
                 }).catch(error => {
                     console.error('Error in API:', error);
                     // Unlock the board if API error
                     setIsLocked(false);
-                });
-                // Checks if game is over
-                if(engine.isGameOver()){
-                    console.log("game won!")
-                    setGameState(true)
-                    setIsLocked(true)
+                    setGameStatus('playing');
+                });                // Checks if game is over
+                if(currentEngine.isGameOver()){
+                    console.log("game won!");
+                    setGameState(true);
+                    setIsLocked(true);
+                    setGameStatus('gameOver');
                 }
                 return true;
             }
@@ -107,64 +167,134 @@ function ChessBoard() {
             // Extracts values from API response
             const bestMove = data.bestmove;
             const success = data.success;
+            
             // Completes the move, updates fen, and checks if game is over
+            const currentEngine = new Chess();
+            currentEngine.load(board);
             if (bestMove && success) {
-                engine.load(board)
-                engine.move(bestMove)
-                setBoardState(engine.fen())
-                if(engine.isGameOver()) {
-                    setIsLocked(true)
-                    setGameState(true)
+                currentEngine.move(bestMove);
+                setBoardState(currentEngine.fen());
+                setMoveCount((prev: number) => prev + 1);
+                if(currentEngine.isGameOver()) {
+                    setIsLocked(true);
+                    setGameState(true);
+                    setGameStatus('gameOver');
                 }
-            }
-            else {
+            } else {
                 throw new Error('API response was not ok');
             }
 
         } catch (error) {
             console.error('Error calling the API:', error);
+            // return; // Removed to avoid unhandled promise rejection
         }
-    };
+    };    
     // Resets game
     const ResetGame = () => {
-        engine.reset()
-        setBoardState(engine.fen())
-        setIsLocked(false)
-        setGameState(false)
-    }
+        const currentEngine = new Chess(); // Use a local engine instance
+        currentEngine.reset();
+        setBoardState(currentEngine.fen());
+        setIsLocked(false);
+        setGameState(false);
+        setMoveCount(0);
+        setGameStatus('playing');
+    };
+
     return (
-        <div style={{ backgroundColor: '#f4f4f9', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px' }}>
-            <div style={{ marginBottom: '20px' }}>
-                {gameState && <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'red' }}>Game is over!</div>}
+        <div className={`${styles.container} ${isDarkMode ? styles.dark : styles.light}`}>
+            {/* Theme Toggle Button */}
+            <button 
+                className={styles.themeToggle}
+                onClick={toggleDarkMode}
+                title={`Switch to ${isDarkMode ? 'Light' : 'Dark'} Mode`}
+            >
+                {isDarkMode ? '☀️' : '🌙'}
+            </button>
+
+            {/* Header */}
+            <div className={styles.header}>
+                <h1 className={styles.title}>AI Chess</h1>
+                <p className={styles.subtitle}>Challenge the AI in this beautiful chess experience</p>
             </div>
-            <div style={{ width: '500px', marginBottom: '20px' }}>
+
+            {/* Game Info Cards */}
+            <div className={styles.gameInfo}>
+                <div className={styles.infoCard}>
+                    <h4>Current Turn</h4>
+                    <p>{getCurrentPlayer()}</p>
+                </div>
+                <div className={styles.infoCard}>
+                    <h4>Moves Played</h4>
+                    <p>{moveCount}</p>
+                </div>
+                <div className={styles.infoCard}>
+                    <h4>Game Status</h4>
+                    <p>{gameState ? 'Finished' : isLocked ? 'AI Thinking' : 'Active'}</p>
+                </div>
+            </div>
+
+            {/* Game Status */}
+            <div className={`${styles.gameStatus} ${
+                gameState ? styles.gameOver : 
+                gameStatus === 'waiting' ? styles.waiting : 
+                styles.playing
+            }`}>
+                {gameState ? (
+                    <div>
+                        🎉 {getGameResult()}
+                    </div>
+                ) : gameStatus === 'waiting' ? (
+                    <div>
+                        🤔 AI is thinking...
+                    </div>
+                ) : (
+                    <div>
+                        ♟️ Your turn! Make your move.
+                    </div>
+                )}
+            </div>
+
+            {/* Chess Board */}
+            <div className={styles.boardContainer}>
                 <Chessboard
                     id="BasicBoard"
                     boardOrientation={boardOrientationState}
                     showBoardNotation={true}
                     position={boardState}
                     onPieceDrop={onDrop}
+                    boardWidth={500}
+                    customBoardStyle={{
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+                    }}
+                    customDarkSquareStyle={{ backgroundColor: '#8B4513' }}
+                    customLightSquareStyle={{ backgroundColor: '#F5DEB3' }}
                 />
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+
+            {/* Control Buttons */}
+            <div className={styles.controls}>
                 <button
                     onClick={playRandomMove}
-                    disabled={isLocked}
-                    style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    disabled={isLocked || gameState}
+                    className={`${styles.button} ${styles.primaryButton}`}
+                    title="Play a random move for your side"
                 >
-                    Play Random Move
+                    🎲 Random Move
                 </button>
                 <button
                     onClick={flipBoard}
-                    style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    className={`${styles.button} ${styles.secondaryButton}`}
+                    title="Flip the board orientation"
                 >
-                    Flip Board
+                    🔄 Flip Board
                 </button>
                 <button
                     onClick={ResetGame}
-                    style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    className={`${styles.button} ${styles.dangerButton}`}
+                    title="Start a new game"
                 >
-                    Reset Game
+                    🔄 New Game
                 </button>
             </div>
         </div>
