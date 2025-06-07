@@ -22,6 +22,10 @@ function ChessBoard() {
     const [moveCount, setMoveCount] = useState(0);
     // State to track game status
     const [gameStatus, setGameStatus] = useState<'playing' | 'waiting' | 'gameOver'>('playing');
+    // State for AI explanation
+    const [aiExplanation, setAiExplanation] = useState<string>('');
+    // State for AI explanation loading status
+    const [isAiExplanationLoading, setIsAiExplanationLoading] = useState<boolean>(false);
 
     // Load theme preference from localStorage on component mount
     useEffect(() => {
@@ -198,6 +202,46 @@ function ChessBoard() {
         setGameState(false);
         setMoveCount(0);
         setGameStatus('playing');
+        setAiExplanation(''); // Clear AI explanation on reset
+    };
+
+    // Function to fetch AI explanation from the backend
+    const fetchAiExplanation = async () => {
+        if (isLocked || gameState) return; // Don't fetch if game is over or AI is thinking
+
+        setIsAiExplanationLoading(true);
+        setAiExplanation(''); // Clear previous explanation
+
+        try {
+            const currentEngine = new Chess();
+            currentEngine.load(boardState);
+            const fen = currentEngine.fen();
+
+            const response = await fetch("http://localhost:8081/get-ai-explanation", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fen }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Network response was not ok for AI explanation.' }));
+                throw new Error(errorData.detail || 'Network response was not ok for AI explanation.');
+            }
+
+            const data = await response.json();
+            if (data.explanation) {
+                setAiExplanation(data.explanation);
+            } else {
+                setAiExplanation('No explanation available at the moment.');
+            }
+        } catch (error) {
+            console.error('Error fetching AI explanation:', error);
+            setAiExplanation(`Failed to fetch AI explanation. ${error instanceof Error ? error.message : 'Please try again.'}`);
+        } finally {
+            setIsAiExplanationLoading(false);
+        }
     };
 
     return (
@@ -253,23 +297,39 @@ function ChessBoard() {
                 )}
             </div>
 
-            {/* Chess Board */}
-            <div className={styles.boardContainer}>
-                <Chessboard
-                    id="BasicBoard"
-                    boardOrientation={boardOrientationState}
-                    showBoardNotation={true}
-                    position={boardState}
-                    onPieceDrop={onDrop}
-                    boardWidth={500}
-                    customBoardStyle={{
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-                    }}
-                    customDarkSquareStyle={{ backgroundColor: '#8B4513' }}
-                    customLightSquareStyle={{ backgroundColor: '#F5DEB3' }}
-                />
+            {/* Chess Board and Controls Container */}
+            <div className={styles.mainContent}>
+                {/* Chess Board */}
+                <div className={styles.boardContainer}>
+                    <Chessboard
+                        id="BasicBoard"
+                        boardOrientation={boardOrientationState}
+                        showBoardNotation={true}
+                        position={boardState}
+                        onPieceDrop={onDrop}
+                        boardWidth={500}
+                        customBoardStyle={{
+                            borderRadius: '12px',
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+                        }}
+                        customDarkSquareStyle={{ backgroundColor: '#8B4513' }}
+                        customLightSquareStyle={{ backgroundColor: '#F5DEB3' }}
+                    />
+                </div>
+
+                {/* AI Chat / Explanation Area */}
+                <div className={styles.aiChatArea}>
+                    <h3>AI Chess Coach</h3>
+                    {isAiExplanationLoading && <p>Loading explanation...</p>}
+                    {aiExplanation && !isAiExplanationLoading && (
+                        <div className={styles.aiExplanation}>
+                            <h4>Gemini's Thoughts:</h4>
+                            <p>{aiExplanation}</p>
+                        </div>
+                    )}
+                </div>
             </div>
+
 
             {/* Control Buttons */}
             <div className={styles.controls}>
@@ -280,6 +340,14 @@ function ChessBoard() {
                     title="Play a random move for your side"
                 >
                     🎲 Random Move
+                </button>
+                <button
+                    onClick={fetchAiExplanation}
+                    disabled={isLocked || gameState || isAiExplanationLoading}
+                    className={`${styles.button} ${styles.primaryButton}`}
+                    title="Get an explanation from Gemini AI"
+                >
+                    🧠 Get AI Explanation
                 </button>
                 <button
                     onClick={flipBoard}

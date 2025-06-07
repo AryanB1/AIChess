@@ -80,7 +80,7 @@ func StockFishEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Unmarshals the response into FullStockfishResponse struct
 	var fullResponse FullStockfishResponse
 	err = json.Unmarshal(respBody, &fullResponse)
-	if err != nil || fullResponse.Success == false {
+	if err != nil || !fullResponse.Success {
 		http.Error(w, "Failed to parse Stockfish API response", http.StatusInternalServerError)
 		return
 	}
@@ -105,7 +105,65 @@ func StockFishEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Calls the stockfish api and gets the best moves
+func StockfishHintEndpoint(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var params GetStockfishParams
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		http.Error(w, "Invalid JSON format: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Sends request to stockfish
+	resp, err := SendRequestToStockFish(params)
+	if err != nil {
+		http.Error(w, "Failed to call Stockfish API: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to read Stockfish API response body: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var fullResponse FullStockfishResponse
+	if err := json.Unmarshal(respBody, &fullResponse); err != nil {
+		http.Error(w, "Failed to parse Stockfish API response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if !fullResponse.Success {
+		http.Error(w, "Stockfish API call was not successful", http.StatusInternalServerError)
+		return
+	}
+
+	hintResponse := struct {
+		Hint string `json:"hint"`
+	}{
+		Hint: ExtractBestMove(fullResponse.BestMove),
+	}
+
+	if err := json.NewEncoder(w).Encode(hintResponse); err != nil {
+		http.Error(w, "Failed to write hint response: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func SendRequestToStockFish(body GetStockfishParams) (*http.Response, error) {
 	params := url.Values{}
 	params.Add("fen", body.Fen)
@@ -127,7 +185,6 @@ func SendRequestToStockFish(body GetStockfishParams) (*http.Response, error) {
 	return resp, nil
 }
 
-// Parses stockfish response to get the formatted move that is then passed to frontend
 func ExtractBestMove(bestMove string) string {
 	parts := strings.Split(bestMove, " ")
 	if len(parts) > 1 {
