@@ -15,3 +15,5 @@
   - `cd backend`
   - `go build`
   - `./AIChess`
+
+Note: To use the AI hints feature you will need to supply your own Gemini API key. 
